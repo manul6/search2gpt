@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">search2gpt</string>
+    <string name="search_hint">search perplexity.ai…</string>
+    <string name="search_description">search the web with perplexity.ai</string>
+    <string name="initial_message">ready to search! use your device search to open perplexity.ai with your query.</string>
+</resources>
