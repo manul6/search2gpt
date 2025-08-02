@@ -1,0 +1,239 @@
+name: Android CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  lint:
+    name: Code Quality Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+            
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+        
+      - name: Run Lint
+        run: ./gradlew lintDebug
+        
+      - name: Upload Lint Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lint-results
+          path: app/build/reports/lint-results-debug.html
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: java-kotlin
+          
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+        
+      - name: Build for analysis
+        run: ./gradlew assembleDebug
+        
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+            
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+        
+      - name: Run Unit Tests
+        run: ./gradlew testDebugUnitTest
+        
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: app/build/reports/tests/
+
+  build:
+    name: Build APK
+    needs: [lint, security-scan, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+            
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+        
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
+        
+      - name: Build Release APK
+        run: ./gradlew assembleRelease
+        
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: search2gpt-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: search2gpt-release-apk
+          path: app/build/outputs/apk/release/app-release-unsigned.apk
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Download Debug APK
+        uses: actions/download-artifact@v4
+        with:
+          name: search2gpt-debug-apk
+          path: ./artifacts/
+          
+      - name: Get commit SHA short
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: dev-${{ steps.vars.outputs.sha_short }}
+          name: "🚀 Dev Build ${{ steps.vars.outputs.sha_short }}"
+          body: |
+            ### search2gpt Development Build
+            
+            **Commit:** ${{ github.sha }}
+            **Branch:** ${{ github.ref_name }}
+            
+            🔍 **Features:**
+            - Samsung Finder integration
+            - Perplexity.ai search
+            - Global search provider
+            
+            📱 **Installation:**
+            Download the APK below and install on your Android device.
+            
+            ⚠️ **Note:** This is a development build for testing purposes.
+            
+          files: |
+            ./artifacts/app-debug.apk
+          prerelease: true
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notify:
+    name: Notify Status
+    needs: [lint, security-scan, test, build]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check job statuses
+        run: |
+          echo "Lint: ${{ needs.lint.result }}"
+          echo "Security Scan: ${{ needs.security-scan.result }}"
+          echo "Test: ${{ needs.test.result }}"
+          echo "Build: ${{ needs.build.result }}"
+          
+          if [[ "${{ needs.lint.result }}" == "failure" || 
+                "${{ needs.security-scan.result }}" == "failure" || 
+                "${{ needs.test.result }}" == "failure" || 
+                "${{ needs.build.result }}" == "failure" ]]; then
+            echo "❌ Pipeline failed!"
+            exit 1
+          else
+            echo "✅ Pipeline succeeded!"
+          fi
