@@ -47,3 +47,51 @@ jobs:
         with:
           name: search2gpt-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Download Debug APK
+        uses: actions/download-artifact@v4
+        with:
+          name: search2gpt-debug-apk
+          path: ./artifacts/
+          
+      - name: Get commit SHA short
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: dev-${{ steps.vars.outputs.sha_short }}
+          name: "🚀 search2gpt dev build ${{ steps.vars.outputs.sha_short }}"
+          body: |
+            ### search2gpt development build
+            
+            **commit:** ${{ github.sha }}
+            **branch:** ${{ github.ref_name }}
+            
+            🔍 **features:**
+            - samsung finder integration
+            - perplexity.ai search
+            - global search provider
+            - optimized suggestion ranking
+            
+            📱 **installation:**
+            download the apk below and install on your android device
+            
+            ⚠️ **note:** development build for testing purposes
+            
+          files: |
+            ./artifacts/app-debug.apk
+          prerelease: true
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
