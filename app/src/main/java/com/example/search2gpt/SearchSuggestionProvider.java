@@ -49,7 +49,7 @@ public class SearchSuggestionProvider extends SearchRecentSuggestionsProvider {
                     SearchManager.SUGGEST_COLUMN_RATING_SCORE
                 });
                 
-                // add 3-6 high-quality suggestions (optimal range for finder)
+                // add single high-quality suggestion with maximum priority
                 matrixCursor.addRow(new Object[]{
                     0,
                     "search \"" + query + "\" with perplexity.ai",
@@ -57,26 +57,6 @@ public class SearchSuggestionProvider extends SearchRecentSuggestionsProvider {
                     android.R.drawable.ic_menu_search, // built-in search icon
                     "android.intent.action.VIEW",
                     "search2gpt://search?q=" + Uri.encode(query),
-                    10.0f // maximum rating score
-                });
-                
-                matrixCursor.addRow(new Object[]{
-                    1,
-                    "perplexity.ai: " + query,
-                    "ai search engine for accurate answers",
-                    android.R.drawable.ic_menu_info_details,
-                    "android.intent.action.VIEW",
-                    "search2gpt://perplexity?q=" + Uri.encode(query),
-                    10.0f // maximum rating score
-                });
-                
-                matrixCursor.addRow(new Object[]{
-                    2,
-                    "ask ai about \"" + query + "\"",
-                    "powered by search2gpt",
-                    android.R.drawable.ic_dialog_info,
-                    "android.intent.action.VIEW",
-                    "search2gpt://quick?q=" + Uri.encode(query),
                     10.0f // maximum rating score
                 });
                 
