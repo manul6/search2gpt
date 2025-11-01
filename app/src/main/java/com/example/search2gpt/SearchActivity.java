@@ -66,11 +66,57 @@ public class SearchActivity extends AppCompatActivity {
             // encode the query for url safety
             String encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8.toString());
             
+            // update ui to show what's happening
+            updateResponse("opening perplexity for: \"" + query + "\"");
+            
+            // try to open in Perplexity app first, then fallback to browser
+            if (!tryOpenInPerplexityApp(query, encodedQuery)) {
+                openInBrowser(query, encodedQuery);
+            }
+            
+        } catch (Exception e) {
+            showError("error opening perplexity: " + e.getMessage());
+        }
+    }
+    
+    private boolean tryOpenInPerplexityApp(String query, String encodedQuery) {
+        // try multiple deep link schemes that Perplexity might use
+        String[] deepLinkSchemes = {
+            "perplexity://search?q=" + encodedQuery,
+            "perplexity://q/" + encodedQuery,
+            "perplexityai://search?q=" + encodedQuery
+        };
+        
+        for (String deepLink : deepLinkSchemes) {
+            try {
+                Intent appIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(deepLink));
+                appIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                
+                // check if any app can handle this intent
+                if (appIntent.resolveActivity(getPackageManager()) != null) {
+                    startActivity(appIntent);
+                    
+                    // save query to recent suggestions database
+                    SearchRecentSuggestions suggestions = new SearchRecentSuggestions(this,
+                        SearchSuggestionProvider.AUTHORITY, 
+                        SearchSuggestionProvider.MODE);
+                    suggestions.saveRecentQuery(query, null);
+                    
+                    Toast.makeText(this, "opening in perplexity app...", Toast.LENGTH_SHORT).show();
+                    return true; // successfully opened in app
+                }
+            } catch (Exception e) {
+                // continue to next scheme
+            }
+        }
+        
+        return false; // app not found or couldn't open
+    }
+    
+    private void openInBrowser(String query, String encodedQuery) {
+        try {
             // create the perplexity url
             String perplexityUrl = "https://www.perplexity.ai/?q=" + encodedQuery;
-            
-            // update ui to show what's happening
-            updateResponse("opening perplexity.ai for: \"" + query + "\"");
             
             // create intent to open browser
             Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(perplexityUrl));
@@ -87,7 +133,7 @@ public class SearchActivity extends AppCompatActivity {
                 suggestions.saveRecentQuery(query, null);
                 
                 // show success message
-                Toast.makeText(this, "opening perplexity.ai...", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "opening perplexity.ai in browser...", Toast.LENGTH_SHORT).show();
                 
             } catch (android.content.ActivityNotFoundException e) {
                 // if no browser found, try with explicit browser package

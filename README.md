@@ -1,14 +1,15 @@
 # search2gpt
 
-an android app that captures device searches and opens them directly in perplexity.ai in your browser.
+an android app that captures device searches and opens them directly in the perplexity app or perplexity.ai in your browser.
 
 ## features
 
 - **native android search integration**: captures queries from android's global search
-- **instant browser launch**: opens perplexity.ai with your search query
+- **perplexity app deep linking**: opens queries directly in the perplexity app if installed
+- **smart fallback**: automatically opens in browser if perplexity app is not installed
 - **no setup required**: no api keys or configuration needed
 - **lightweight**: minimal app with fast response times
-- **privacy-focused**: searches go directly to perplexity.ai without intermediary servers
+- **privacy-focused**: searches go directly to perplexity without intermediary servers
 
 ## setup instructions
 
@@ -91,9 +92,9 @@ search2gpt/
 
 1. app receives search intent from android system
 2. url-encodes the search query for safety
-3. constructs perplexity.ai url: `https://www.perplexity.ai/?q=encoded_query`
-4. launches browser with the constructed url
-5. user gets results directly from perplexity.ai
+3. attempts to open query in perplexity app using deep links (tries multiple schemes)
+4. if perplexity app is not installed, falls back to browser with url: `https://www.perplexity.ai/?q=encoded_query`
+5. user gets results directly from perplexity app or perplexity.ai
 
 ## troubleshooting
 
@@ -117,9 +118,10 @@ search2gpt/
 ## advantages of this approach
 
 - **zero configuration**: works immediately after installation
-- **always up-to-date**: uses latest perplexity.ai features
+- **app-first experience**: prioritizes native perplexity app for better performance
+- **automatic fallback**: seamlessly switches to browser if app not installed
+- **always up-to-date**: uses latest perplexity features
 - **no api costs**: free to use without api limits
-- **better ui**: uses perplexity's optimized web interface
 - **privacy**: direct connection to perplexity, no intermediary
 
 ## future enhancements
@@ -127,8 +129,8 @@ search2gpt/
 - support for other search engines (google, bing, duckduckgo)
 - custom url patterns and parameters
 - search provider selection settings
-- deep linking options
 - custom browser selection
+- user preference for app vs browser
 
 ## license
 

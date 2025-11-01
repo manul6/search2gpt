@@ -13,6 +13,16 @@
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="https" />
         </intent>
+        <!-- allow detection of Perplexity app for deep linking -->
+        <package android:name="ai.perplexity.app.android" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="perplexity" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="perplexityai" />
+        </intent>
     </queries>
 
     <application
