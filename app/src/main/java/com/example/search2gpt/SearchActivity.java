@@ -95,13 +95,7 @@ public class SearchActivity extends AppCompatActivity {
                 // check if any app can handle this intent
                 if (appIntent.resolveActivity(getPackageManager()) != null) {
                     startActivity(appIntent);
-                    
-                    // save query to recent suggestions database
-                    SearchRecentSuggestions suggestions = new SearchRecentSuggestions(this,
-                        SearchSuggestionProvider.AUTHORITY, 
-                        SearchSuggestionProvider.MODE);
-                    suggestions.saveRecentQuery(query, null);
-                    
+                    saveQueryToRecent(query);
                     Toast.makeText(this, "opening in perplexity app...", Toast.LENGTH_SHORT).show();
                     return true; // successfully opened in app
                 }
@@ -125,14 +119,7 @@ public class SearchActivity extends AppCompatActivity {
             // try to start the activity directly - let android handle browser selection
             try {
                 startActivity(browserIntent);
-                
-                // save query to recent suggestions database
-                SearchRecentSuggestions suggestions = new SearchRecentSuggestions(this,
-                    SearchSuggestionProvider.AUTHORITY, 
-                    SearchSuggestionProvider.MODE);
-                suggestions.saveRecentQuery(query, null);
-                
-                // show success message
+                saveQueryToRecent(query);
                 Toast.makeText(this, "opening perplexity.ai in browser...", Toast.LENGTH_SHORT).show();
                 
             } catch (android.content.ActivityNotFoundException e) {
@@ -154,13 +141,7 @@ public class SearchActivity extends AppCompatActivity {
             chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             
             startActivity(chooser);
-            
-            // save query to recent suggestions database
-            SearchRecentSuggestions suggestions = new SearchRecentSuggestions(this,
-                SearchSuggestionProvider.AUTHORITY, 
-                SearchSuggestionProvider.MODE);
-            suggestions.saveRecentQuery(query, null);
-            
+            saveQueryToRecent(query);
             Toast.makeText(this, "opening perplexity.ai...", Toast.LENGTH_SHORT).show();
             
         } catch (Exception e) {
@@ -179,5 +160,12 @@ public class SearchActivity extends AppCompatActivity {
             responseView.setText("❌ " + errorMessage);
             Toast.makeText(SearchActivity.this, errorMessage, Toast.LENGTH_LONG).show();
         });
+    }
+    
+    private void saveQueryToRecent(String query) {
+        SearchRecentSuggestions suggestions = new SearchRecentSuggestions(this,
+            SearchSuggestionProvider.AUTHORITY, 
+            SearchSuggestionProvider.MODE);
+        suggestions.saveRecentQuery(query, null);
     }
 }
