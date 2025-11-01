@@ -66,11 +66,52 @@ public class SearchActivity extends AppCompatActivity {
             // encode the query for url safety
             String encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8.toString());
             
-            // create the perplexity url
-            String perplexityUrl = "https://www.perplexity.ai/?q=" + encodedQuery;
+            // try deep link first (Perplexity app)
+            String deepLinkUrl = "perplexity://search?q=" + encodedQuery;
             
             // update ui to show what's happening
-            updateResponse("opening perplexity.ai for: \"" + query + "\"");
+            updateResponse("opening perplexity for: \"" + query + "\"");
+            
+            // create intent to open Perplexity app via deep link
+            Intent appIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(deepLinkUrl));
+            appIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            
+            // check if the Perplexity app can handle this intent
+            if (appIntent.resolveActivity(getPackageManager()) != null) {
+                // Perplexity app is installed, open it
+                try {
+                    startActivity(appIntent);
+                    
+                    // save query to recent suggestions database
+                    SearchRecentSuggestions suggestions = new SearchRecentSuggestions(this,
+                        SearchSuggestionProvider.AUTHORITY, 
+                        SearchSuggestionProvider.MODE);
+                    suggestions.saveRecentQuery(query, null);
+                    
+                    // show success message
+                    Toast.makeText(this, "opening perplexity app...", Toast.LENGTH_SHORT).show();
+                    
+                } catch (android.content.ActivityNotFoundException e) {
+                    // fallback to browser if deep link fails
+                    openPerplexityInBrowserFallback(query, encodedQuery);
+                }
+            } else {
+                // Perplexity app not installed, fallback to browser
+                openPerplexityInBrowserFallback(query, encodedQuery);
+            }
+            
+        } catch (Exception e) {
+            showError("error opening perplexity: " + e.getMessage());
+        }
+    }
+    
+    private void openPerplexityInBrowserFallback(String query, String encodedQuery) {
+        try {
+            // create the perplexity web url
+            String perplexityUrl = "https://www.perplexity.ai/?q=" + encodedQuery;
+            
+            // update ui
+            updateResponse("perplexity app not found, opening browser for: \"" + query + "\"");
             
             // create intent to open browser
             Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(perplexityUrl));
@@ -87,7 +128,7 @@ public class SearchActivity extends AppCompatActivity {
                 suggestions.saveRecentQuery(query, null);
                 
                 // show success message
-                Toast.makeText(this, "opening perplexity.ai...", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "opening perplexity.ai in browser...", Toast.LENGTH_SHORT).show();
                 
             } catch (android.content.ActivityNotFoundException e) {
                 // if no browser found, try with explicit browser package
